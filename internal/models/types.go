@@ -36,6 +36,7 @@ type GroupConfig struct {
 	MaxRetries                   *int    `json:"max_retries,omitempty"`
 	BlacklistThreshold           *int    `json:"blacklist_threshold,omitempty"`
 	FailoverStatusCodes          *string `json:"failover_status_codes,omitempty"`
+	FailoverBodyPhrases          *string `json:"failover_body_phrases,omitempty"`
 	KeyValidationIntervalMinutes *int    `json:"key_validation_interval_minutes,omitempty"`
 	KeyValidationConcurrency     *int    `json:"key_validation_concurrency,omitempty"`
 	KeyValidationTimeoutSeconds  *int    `json:"key_validation_timeout_seconds,omitempty"`
@@ -110,6 +111,7 @@ type Group struct {
 	HeaderRuleList            []HeaderRule               `gorm:"-" json:"-"`
 	ModelRedirectMap          map[string]string          `gorm:"-" json:"-"`
 	FailoverStatusCodeMatcher failover.StatusCodeMatcher `gorm:"-" json:"-"`
+	FailoverBodyPhraseMatcher failover.BodyPhraseMatcher `gorm:"-" json:"-"`
 }
 
 // APIKey 对应 api_keys 表

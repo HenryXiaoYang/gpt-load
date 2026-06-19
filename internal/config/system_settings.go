@@ -39,6 +39,11 @@ func validateStringSettingValue(key, val string) error {
 			return fmt.Errorf("invalid value for %s (%q): %w", key, val, err)
 		}
 	}
+	if key == "failover_body_phrases" {
+		if _, err := failover.ParseBodyPhraseMatcher(val); err != nil {
+			return fmt.Errorf("invalid value for %s (%q): %w", key, val, err)
+		}
+	}
 	return nil
 }
 
@@ -427,6 +432,7 @@ func (sm *SystemSettingsManager) DisplaySystemConfig(settings types.SystemSettin
 	logrus.Infof("    Max Retries: %d", settings.MaxRetries)
 	logrus.Infof("    Blacklist Threshold: %d", settings.BlacklistThreshold)
 	logrus.Infof("    Failover Status Codes: %s", settings.FailoverStatusCodes)
+	logrus.Infof("    Failover Body Phrases: %s", settings.FailoverBodyPhrases)
 	logrus.Infof("    Key Validation Interval: %d minutes", settings.KeyValidationIntervalMinutes)
 	logrus.Info("====================================")
 	logrus.Info("")

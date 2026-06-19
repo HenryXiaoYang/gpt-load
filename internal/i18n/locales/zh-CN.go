@@ -167,6 +167,8 @@ var MessagesZhCN = map[string]string{
 	"config.blacklist_threshold_desc":        "一个 Key 累计失败多少次后进入黑名单，0为不拉黑。",
 	"config.failover_status_codes":           "故障转移状态码",
 	"config.failover_status_codes_desc":      "触发故障转移（重试）的上游 HTTP 状态码完整列表，支持逗号分隔和范围，例如：400-403,405-999,250-260。分组可单独覆盖此值。",
+	"config.failover_body_phrases":           "故障转移响应内容短语",
+	"config.failover_body_phrases_desc":      "可选的响应体短语匹配规则，命中后触发故障转移。每行或分号分隔一条规则，例如：400:insufficient quota。同一状态码支持多个短语。状态码专属规则会使该状态码仅在短语匹配时判定失败。",
 	"config.key_validation_interval":         "密钥验证间隔（分钟）",
 	"config.key_validation_interval_desc":    "后台验证密钥的默认间隔（分钟）。",
 	"config.key_validation_concurrency":      "密钥验证并发数",

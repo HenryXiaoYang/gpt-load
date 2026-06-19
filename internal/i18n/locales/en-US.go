@@ -167,6 +167,8 @@ var MessagesEnUS = map[string]string{
 	"config.blacklist_threshold_desc":        "After how many cumulative failures does a Key enter the blacklist; 0 means do not blacklist.",
 	"config.failover_status_codes":           "Failover Status Codes",
 	"config.failover_status_codes_desc":      "Complete list of upstream HTTP status codes that trigger failover (retry). Supports comma-separated values and ranges, e.g.: 400-403,405-999,250-260. Groups can override this value individually.",
+	"config.failover_body_phrases":           "Failover Body Phrases",
+	"config.failover_body_phrases_desc":      "Optional response-body phrases that trigger failover. Use one rule per line or semicolon, e.g.: 400:insufficient quota. Multiple phrases for the same status are supported. A status-specific rule makes that status fail only when a phrase matches.",
 	"config.key_validation_interval":         "Key Validation Interval (minutes)",
 	"config.key_validation_interval_desc":    "Default interval (minutes) for background key validation.",
 	"config.key_validation_concurrency":      "Key Validation Concurrency",

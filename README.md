@@ -259,6 +259,8 @@ Supported Proxy Protocol Formats:
 | -------------------------- | --------------------------------- | ------- | -------------- | -------------------------------------------------------------------------- |
 | Max Retries                | `max_retries`                     | 3       | ✅             | Maximum retry count using different keys for single request                |
 | Blacklist Threshold        | `blacklist_threshold`             | 3       | ✅             | After how many cumulative failures does the key get blacklisted                 |
+| Failover Status Codes      | `failover_status_codes`           | 400-403,405-999 | ✅       | Upstream HTTP status codes that trigger retry                              |
+| Failover Body Phrases      | `failover_body_phrases`           | -       | ✅             | Optional `status:phrase` rules; multiple phrases per status are supported  |
 | Key Validation Interval    | `key_validation_interval_minutes` | 60      | ✅             | Background scheduled key validation cycle (minutes)                        |
 | Key Validation Concurrency | `key_validation_concurrency`      | 10      | ✅             | Concurrency for background validation of invalid keys                      |
 | Key Validation Timeout     | `key_validation_timeout_seconds`  | 20      | ✅             | API request timeout for validating individual keys in background (seconds) |

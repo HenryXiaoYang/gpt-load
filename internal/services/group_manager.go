@@ -84,6 +84,17 @@ func (gm *GroupManager) Initialize() error {
 				g.FailoverStatusCodeMatcher = matcher
 			}
 
+			bodyMatcher, err := failover.ParseBodyPhraseMatcher(g.EffectiveConfig.FailoverBodyPhrases)
+			if err != nil {
+				logrus.WithFields(logrus.Fields{
+					"group_name": g.Name,
+					"spec":       g.EffectiveConfig.FailoverBodyPhrases,
+					"error":      err,
+				}).Warn("Invalid failover body phrases spec, ignoring")
+			} else {
+				g.FailoverBodyPhraseMatcher = bodyMatcher
+			}
+
 			// Parse header rules with error handling
 			if len(group.HeaderRules) > 0 {
 				if err := json.Unmarshal(group.HeaderRules, &g.HeaderRuleList); err != nil {

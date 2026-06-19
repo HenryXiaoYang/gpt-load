@@ -201,9 +201,10 @@ func (ps *ProxyServer) executeRequestWithRetry(
 	}
 
 	// Unified error handling for retries.
-	// Retry policy is fully defined by group.FailoverStatusCodeMatcher (derived from EffectiveConfig).
-	shouldRetryByStatus := resp != nil && shouldFailoverOnStatusCode(resp.StatusCode, group)
-	if err != nil || shouldRetryByStatus {
+	// Retry policy is defined by status codes, with optional body phrase rules
+	// making a matching status conditional on response content.
+	shouldRetryByResponse, responseBody, responseBodyReadErr, matchedPhrase := shouldFailoverOnResponse(resp, group)
+	if err != nil || shouldRetryByResponse {
 		if err != nil && app_errors.IsIgnorableError(err) {
 			logrus.Debugf("Client-side ignorable error for key %s, aborting retries: %v", utils.MaskAPIKey(apiKey.KeyValue), err)
 			ps.logRequest(c, originalGroup, group, apiKey, startTime, 499, err, isStream, upstreamURL, channelHandler, bodyBytes, models.RequestTypeFinal)
@@ -220,18 +221,29 @@ func (ps *ProxyServer) executeRequestWithRetry(
 			parsedError = errorMessage
 			logrus.Debugf("Request failed (attempt %d/%d) for key %s: %v", retryCount+1, cfg.MaxRetries, utils.MaskAPIKey(apiKey.KeyValue), err)
 		} else {
-			// Retryable upstream response (HTTP status code matched failover policy)
+			// Retryable upstream response (HTTP status/body matched failover policy)
 			statusCode = resp.StatusCode
-			errorBody, readErr := io.ReadAll(resp.Body)
-			if readErr != nil {
-				logrus.Errorf("Failed to read error body: %v", readErr)
-				errorBody = []byte("Failed to read error body")
+			errorBody := responseBody
+			if responseBodyReadErr != nil {
+				logrus.Errorf("Failed to read error body: %v", responseBodyReadErr)
 			}
 
-			errorBody = handleGzipCompression(resp, errorBody)
+			if errorBody == nil {
+				var readErr error
+				errorBody, readErr = io.ReadAll(resp.Body)
+				if readErr != nil {
+					logrus.Errorf("Failed to read error body: %v", readErr)
+					errorBody = []byte("Failed to read error body")
+				}
+				errorBody = handleGzipCompression(resp, errorBody)
+			}
 			errorMessage = string(errorBody)
 			parsedError = app_errors.ParseUpstreamError(errorBody)
-			logrus.Debugf("Request failed with status %d (attempt %d/%d) for key %s. Parsed Error: %s", statusCode, retryCount+1, cfg.MaxRetries, utils.MaskAPIKey(apiKey.KeyValue), parsedError)
+			if matchedPhrase != "" {
+				logrus.Debugf("Request failed with status %d and matched failover body phrase %q (attempt %d/%d) for key %s. Parsed Error: %s", statusCode, matchedPhrase, retryCount+1, cfg.MaxRetries, utils.MaskAPIKey(apiKey.KeyValue), parsedError)
+			} else {
+				logrus.Debugf("Request failed with status %d (attempt %d/%d) for key %s. Parsed Error: %s", statusCode, retryCount+1, cfg.MaxRetries, utils.MaskAPIKey(apiKey.KeyValue), parsedError)
+			}
 		}
 
 		// 使用解析后的错误信息更新密钥状态
@@ -285,11 +297,37 @@ func (ps *ProxyServer) executeRequestWithRetry(
 	ps.logRequest(c, originalGroup, group, apiKey, startTime, resp.StatusCode, nil, isStream, upstreamURL, channelHandler, bodyBytes, models.RequestTypeFinal)
 }
 
-func shouldFailoverOnStatusCode(statusCode int, group *models.Group) bool {
-	if group == nil {
-		return false
+func shouldFailoverOnResponse(resp *http.Response, group *models.Group) (bool, []byte, error, string) {
+	if resp == nil || group == nil {
+		return false, nil, nil, ""
 	}
-	return group.FailoverStatusCodeMatcher.Match(statusCode)
+
+	statusCode := resp.StatusCode
+	statusMatches := group.FailoverStatusCodeMatcher.Match(statusCode)
+	statusRequiresBodyPhrase := group.FailoverBodyPhraseMatcher.HasStatusSpecificRule(statusCode)
+	if !statusMatches && !statusRequiresBodyPhrase {
+		return false, nil, nil, ""
+	}
+
+	bodyPhraseApplies := group.FailoverBodyPhraseMatcher.MightMatchStatus(statusCode)
+	if bodyPhraseApplies {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return true, []byte("Failed to read error body"), err, ""
+		}
+
+		decompressedBody := handleGzipCompression(resp, bodyBytes)
+		if phrase, matched := group.FailoverBodyPhraseMatcher.Match(statusCode, decompressedBody); matched {
+			return true, decompressedBody, nil, phrase
+		}
+
+		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		if statusRequiresBodyPhrase {
+			return false, nil, nil, ""
+		}
+	}
+
+	return statusMatches, nil, nil, ""
 }
 
 // logRequest is a helper function to create and record a request log.

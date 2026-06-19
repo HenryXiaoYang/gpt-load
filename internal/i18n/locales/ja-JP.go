@@ -167,6 +167,8 @@ var MessagesJaJP = map[string]string{
 	"config.blacklist_threshold_desc":        "ある Key が累計で何回失敗するとブラックリストに入るか。0 はブラックリストに入れないことを意味する。",
 	"config.failover_status_codes":           "フェイルオーバーステータスコード",
 	"config.failover_status_codes_desc":      "フェイルオーバー（リトライ）をトリガーする上流 HTTP ステータスコードの完全なリスト。カンマ区切りと範囲指定に対応（例：400-403,405-999,250-260）。グループごとに個別上書き可能。",
+	"config.failover_body_phrases":           "フェイルオーバーボディフレーズ",
+	"config.failover_body_phrases_desc":      "レスポンス本文に含まれるとフェイルオーバーをトリガーする任意のフレーズ。1行またはセミコロンごとに1ルール、例：400:insufficient quota。同じステータスに複数指定できます。ステータス固有ルールがある場合、そのステータスはフレーズ一致時のみ失敗扱いになります。",
 	"config.key_validation_interval":         "キー検証間隔（分）",
 	"config.key_validation_interval_desc":    "バックグラウンドキー検証のデフォルト間隔（分）。",
 	"config.key_validation_concurrency":      "キー検証並行数",

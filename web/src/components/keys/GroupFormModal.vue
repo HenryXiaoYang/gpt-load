@@ -921,6 +921,13 @@ async function handleSubmit() {
                               size="small"
                             />
                             <n-input
+                              v-else-if="configItem.key === 'failover_body_phrases'"
+                              v-model:value="configItem.value as string"
+                              type="textarea"
+                              :placeholder="'400:insufficient quota\n400:credit balance is too low'"
+                              :autosize="{ minRows: 2, maxRows: 6 }"
+                            />
+                            <n-input
                               v-else
                               v-model:value="configItem.value"
                               :placeholder="t('keys.paramValue')"

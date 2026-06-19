@@ -157,6 +157,15 @@ function generateValidationRules(item: Setting): FormItemRule[] {
                   size="small"
                 />
                 <n-input
+                  v-else-if="item.key === 'failover_body_phrases'"
+                  v-model:value="form[item.key] as string"
+                  type="textarea"
+                  :placeholder="'400:insufficient quota\n400:credit balance is too low'"
+                  :autosize="{ minRows: 2, maxRows: 6 }"
+                  clearable
+                  size="small"
+                />
+                <n-input
                   v-else
                   v-model:value="form[item.key] as string"
                   :placeholder="t('settings.inputContent')"
