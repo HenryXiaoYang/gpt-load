@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type openAIRateLimitPair struct {
@@ -48,6 +50,13 @@ var openAIRateLimitTiersByFamily = map[string]map[openAIRateLimitPair]string{
 		{requests: 10_000, tokens: 10_000_000}:  "T4",
 		{requests: 30_000, tokens: 180_000_000}: "T5",
 	},
+	"gpt-5.5-pro": {
+		{requests: 50, tokens: 50_000}:       "T1",
+		{requests: 500, tokens: 200_000}:     "T2",
+		{requests: 500, tokens: 500_000}:     "T3",
+		{requests: 1_000, tokens: 1_000_000}: "T4",
+		{requests: 2_000, tokens: 4_000_000}: "T5",
+	},
 }
 
 func buildOpenAIValidationResult(endpoint *url.URL, model string, headers http.Header) KeyValidationResult {
@@ -61,6 +70,13 @@ func buildOpenAIValidationResult(endpoint *url.URL, model string, headers http.H
 
 	result.OpenAITierUpdated = true
 	result.OpenAITier = inferOpenAITierFromHeaders(model, headers)
+	if result.OpenAITier == "" {
+		logrus.WithFields(logrus.Fields{
+			"model":                      model,
+			"x_ratelimit_limit_requests": headers.Get("x-ratelimit-limit-requests"),
+			"x_ratelimit_limit_tokens":   headers.Get("x-ratelimit-limit-tokens"),
+		}).Debug("Unable to infer OpenAI usage tier from validation rate limit headers")
+	}
 	return result
 }
 
@@ -82,8 +98,8 @@ func inferOpenAITierFromHeaders(model string, headers http.Header) string {
 	}
 
 	pair := openAIRateLimitPair{requests: requests, tokens: tokens}
-	if tiers, ok := openAIRateLimitTiersByFamily[openAIModelRateLimitFamily(model)]; ok {
-		return tiers[pair]
+	if family := openAIModelRateLimitFamily(model); family != "" {
+		return inferOpenAITierFromFamilyLimitPair(family, pair)
 	}
 
 	return inferOpenAITierFromKnownLimitPair(pair)
@@ -99,10 +115,14 @@ func openAIModelRateLimitFamily(model string) string {
 		return "gpt-4.1-small"
 	case strings.HasPrefix(model, "gpt-4.1"):
 		return "gpt-4.1"
-	case strings.HasPrefix(model, "gpt-5.4-mini"),
+	case strings.HasPrefix(model, "gpt-5.5-pro"):
+		return "gpt-5.5-pro"
+	case strings.HasPrefix(model, "gpt-5.5-mini"),
+		strings.HasPrefix(model, "gpt-5.4-mini"),
 		strings.HasPrefix(model, "gpt-5-mini"):
 		return "gpt-5-mini"
-	case strings.HasPrefix(model, "gpt-5.4-nano"),
+	case strings.HasPrefix(model, "gpt-5.5-nano"),
+		strings.HasPrefix(model, "gpt-5.4-nano"),
 		strings.HasPrefix(model, "gpt-5-nano"):
 		return "gpt-5-nano"
 	case strings.HasPrefix(model, "gpt-5.5"),
@@ -112,6 +132,30 @@ func openAIModelRateLimitFamily(model string) string {
 	default:
 		return ""
 	}
+}
+
+func inferOpenAITierFromFamilyLimitPair(family string, pair openAIRateLimitPair) string {
+	tiers, ok := openAIRateLimitTiersByFamily[family]
+	if !ok {
+		return ""
+	}
+	if tier := tiers[pair]; tier != "" {
+		return tier
+	}
+
+	bestRank := 0
+	for knownPair, tier := range tiers {
+		if knownPair.requests > pair.requests || knownPair.tokens > pair.tokens {
+			continue
+		}
+		if rank := openAITierRank(tier); rank > bestRank {
+			bestRank = rank
+		}
+	}
+	if bestRank == 0 {
+		return ""
+	}
+	return "T" + strconv.Itoa(bestRank)
 }
 
 func inferOpenAITierFromKnownLimitPair(pair openAIRateLimitPair) string {
@@ -127,6 +171,17 @@ func inferOpenAITierFromKnownLimitPair(pair openAIRateLimitPair) string {
 		inferredTier = tier
 	}
 	return inferredTier
+}
+
+func openAITierRank(tier string) int {
+	if len(tier) != 2 || tier[0] != 'T' {
+		return 0
+	}
+	rank, err := strconv.Atoi(tier[1:])
+	if err != nil || rank < 1 || rank > 5 {
+		return 0
+	}
+	return rank
 }
 
 func parseOpenAIRateLimitHeader(value string) (int64, bool) {
