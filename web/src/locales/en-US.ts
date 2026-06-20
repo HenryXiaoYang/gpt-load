@@ -201,6 +201,9 @@ export default {
     copyFailed: "Copy failed",
     testingKey: "Testing key...",
     testSuccess: "Key test successful (Duration: {duration})",
+    testSuccessTier: "Key test successful (Duration: {duration}), OpenAI Tier: {tier}",
+    testSuccessTierMissing:
+      "Key test successful (Duration: {duration}), but OpenAI Tier was not inferred: {reason}",
     testFailed: "Key test failed: Invalid API key",
     restoreKey: "Restore Key",
     confirmRestoreKey: 'Are you sure to restore key "{key}"?',

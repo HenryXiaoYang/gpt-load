@@ -5,8 +5,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 type openAIRateLimitPair struct {
@@ -61,22 +59,23 @@ var openAIRateLimitTiersByFamily = map[string]map[openAIRateLimitPair]string{
 
 func buildOpenAIValidationResult(endpoint *url.URL, model string, headers http.Header) KeyValidationResult {
 	result := KeyValidationResult{
-		IsValid: true,
+		IsValid:             true,
+		OpenAIModel:         model,
+		OpenAIRequestsLimit: headers.Get("x-ratelimit-limit-requests"),
+		OpenAITokensLimit:   headers.Get("x-ratelimit-limit-tokens"),
+	}
+	if endpoint != nil {
+		result.OpenAIHost = endpoint.Hostname()
 	}
 
 	if !isOfficialOpenAIAPI(endpoint) {
+		result.OpenAITierReason = "not_official_openai"
 		return result
 	}
 
 	result.OpenAITierUpdated = true
 	result.OpenAITier = inferOpenAITierFromHeaders(model, headers)
-	if result.OpenAITier == "" {
-		logrus.WithFields(logrus.Fields{
-			"model":                      model,
-			"x_ratelimit_limit_requests": headers.Get("x-ratelimit-limit-requests"),
-			"x_ratelimit_limit_tokens":   headers.Get("x-ratelimit-limit-tokens"),
-		}).Debug("Unable to infer OpenAI usage tier from validation rate limit headers")
-	}
+	result.OpenAITierReason = openAITierReason(result.OpenAITier, model, headers)
 	return result
 }
 
@@ -103,6 +102,28 @@ func inferOpenAITierFromHeaders(model string, headers http.Header) string {
 	}
 
 	return inferOpenAITierFromKnownLimitPair(pair)
+}
+
+func openAITierReason(tier, model string, headers http.Header) string {
+	if tier != "" {
+		return "inferred"
+	}
+	if strings.TrimSpace(headers.Get("x-ratelimit-limit-requests")) == "" {
+		return "missing_requests_header"
+	}
+	if strings.TrimSpace(headers.Get("x-ratelimit-limit-tokens")) == "" {
+		return "missing_tokens_header"
+	}
+	if _, ok := parseOpenAIRateLimitHeader(headers.Get("x-ratelimit-limit-requests")); !ok {
+		return "invalid_requests_header"
+	}
+	if _, ok := parseOpenAIRateLimitHeader(headers.Get("x-ratelimit-limit-tokens")); !ok {
+		return "invalid_tokens_header"
+	}
+	if openAIModelRateLimitFamily(model) == "" {
+		return "unknown_model"
+	}
+	return "unmapped_limits"
 }
 
 func openAIModelRateLimitFamily(model string) string {

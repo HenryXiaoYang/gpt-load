@@ -199,6 +199,8 @@ export default {
     copyFailed: "复制失败",
     testingKey: "正在测试密钥...",
     testSuccess: "密钥测试成功 (耗时: {duration})",
+    testSuccessTier: "密钥测试成功 (耗时: {duration})，OpenAI Tier: {tier}",
+    testSuccessTierMissing: "密钥测试成功 (耗时: {duration})，但未推断出 OpenAI Tier: {reason}",
     testFailed: "密钥测试失败: 无效的API密钥",
     restoreKey: "恢复密钥",
     confirmRestoreKey: '确定要恢复密钥"{key}"吗？',

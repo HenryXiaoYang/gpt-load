@@ -200,6 +200,9 @@ export default {
     copyFailed: "コピーに失敗しました",
     testingKey: "キーをテスト中...",
     testSuccess: "キーテスト成功（所要時間: {duration}）",
+    testSuccessTier: "キーテスト成功（所要時間: {duration}）、OpenAI Tier: {tier}",
+    testSuccessTierMissing:
+      "キーテスト成功（所要時間: {duration}）、OpenAI Tier を推定できませんでした: {reason}",
     testFailed: "キーテスト失敗: 無効なAPIキー",
     restoreKey: "キーを復元",
     confirmRestoreKey: 'キー"{key}"を復元してもよろしいですか？',

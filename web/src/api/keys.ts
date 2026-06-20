@@ -150,6 +150,11 @@ export const keysApi = {
       is_valid: boolean;
       openai_tier?: string;
       openai_tier_updated?: boolean;
+      openai_model?: string;
+      openai_host?: string;
+      openai_requests_limit?: string;
+      openai_tokens_limit?: string;
+      openai_tier_reason?: string;
       error: string;
     }[];
     total_duration: number;

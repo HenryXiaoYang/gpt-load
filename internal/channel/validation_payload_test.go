@@ -107,13 +107,32 @@ func TestBuildOpenAIValidationResultOnlyUpdatesOfficialOpenAIAPI(t *testing.T) {
 	headers.Set("x-ratelimit-limit-tokens", "200000")
 
 	official := buildOpenAIValidationResult(mustParseURL(t, "https://api.openai.com/v1/chat/completions"), "gpt-4.1-nano", headers)
-	if !official.IsValid || !official.OpenAITierUpdated || official.OpenAITier != "T1" {
+	if !official.IsValid || !official.OpenAITierUpdated || official.OpenAITier != "T1" || official.OpenAITierReason != "inferred" {
 		t.Fatalf("unexpected official result: %#v", official)
 	}
 
 	compatible := buildOpenAIValidationResult(mustParseURL(t, "https://example.com/v1/chat/completions"), "gpt-4.1-nano", headers)
-	if !compatible.IsValid || compatible.OpenAITierUpdated || compatible.OpenAITier != "" {
+	if !compatible.IsValid || compatible.OpenAITierUpdated || compatible.OpenAITier != "" || compatible.OpenAITierReason != "not_official_openai" {
 		t.Fatalf("unexpected compatible result: %#v", compatible)
+	}
+}
+
+func TestBuildOpenAIValidationResultReturnsTierDiagnostics(t *testing.T) {
+	headers := http.Header{}
+	headers.Set("x-ratelimit-limit-requests", "5000")
+
+	result := buildOpenAIValidationResult(mustParseURL(t, "https://api.openai.com/v1/chat/completions"), "gpt-5.5", headers)
+	if !result.IsValid || !result.OpenAITierUpdated || result.OpenAITier != "" {
+		t.Fatalf("unexpected validation result: %#v", result)
+	}
+	if result.OpenAIModel != "gpt-5.5" || result.OpenAIHost != "api.openai.com" {
+		t.Fatalf("unexpected model or host diagnostics: %#v", result)
+	}
+	if result.OpenAIRequestsLimit != "5000" || result.OpenAITokensLimit != "" {
+		t.Fatalf("unexpected rate limit diagnostics: %#v", result)
+	}
+	if result.OpenAITierReason != "missing_tokens_header" {
+		t.Fatalf("unexpected tier reason: %#v", result)
 	}
 }
 

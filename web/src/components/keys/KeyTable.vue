@@ -243,8 +243,17 @@ async function testKey(_key: KeyRow) {
     const response = await keysApi.testKeys(props.selectedGroup.id, _key.key_value);
     const curValid = response.results?.[0] || {};
     if (curValid.is_valid) {
+      const tierMessage = getOpenAITierTestMessage(
+        curValid,
+        formatDuration(response.total_duration)
+      );
       window.$message.success(
-        t("keys.testSuccess", { duration: formatDuration(response.total_duration) })
+        tierMessage || t("keys.testSuccess", { duration: formatDuration(response.total_duration) }),
+        {
+          keepAliveOnHover: true,
+          duration: tierMessage ? 8000 : 3000,
+          closable: Boolean(tierMessage),
+        }
       );
     } else {
       window.$message.error(curValid.error || t("keys.testFailed"), {
@@ -299,6 +308,42 @@ function toggleKeyVisibility(key: KeyRow) {
 
 function getValidStatusText(key: KeyRow): string {
   return key.openai_tier || t("keys.validShort");
+}
+
+function getOpenAITierTestMessage(
+  result: {
+    openai_tier?: string;
+    openai_tier_reason?: string;
+    openai_model?: string;
+    openai_host?: string;
+    openai_requests_limit?: string;
+    openai_tokens_limit?: string;
+  },
+  duration: string
+): string {
+  if (!result.openai_tier_reason) {
+    return "";
+  }
+
+  const details = [
+    result.openai_model ? `model=${result.openai_model}` : "",
+    result.openai_host ? `host=${result.openai_host}` : "",
+    result.openai_requests_limit ? `rpm=${result.openai_requests_limit}` : "",
+    result.openai_tokens_limit ? `tpm=${result.openai_tokens_limit}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  if (result.openai_tier) {
+    const message = t("keys.testSuccessTier", { tier: result.openai_tier, duration });
+    return details ? `${message} (${details})` : message;
+  }
+
+  const message = t("keys.testSuccessTierMissing", {
+    reason: result.openai_tier_reason,
+    duration,
+  });
+  return details ? `${message} (${details})` : message;
 }
 
 // 获取要显示的值（备注优先，否则显示密钥）

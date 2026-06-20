@@ -18,11 +18,16 @@ const openAIImageGenerationValidationTimeoutSeconds = 300
 
 // KeyTestResult holds the validation result for a single key.
 type KeyTestResult struct {
-	KeyValue          string `json:"key_value"`
-	IsValid           bool   `json:"is_valid"`
-	OpenAITier        string `json:"openai_tier,omitempty"`
-	OpenAITierUpdated bool   `json:"openai_tier_updated,omitempty"`
-	Error             string `json:"error,omitempty"`
+	KeyValue            string `json:"key_value"`
+	IsValid             bool   `json:"is_valid"`
+	OpenAITier          string `json:"openai_tier,omitempty"`
+	OpenAITierUpdated   bool   `json:"openai_tier_updated,omitempty"`
+	OpenAIModel         string `json:"openai_model,omitempty"`
+	OpenAIHost          string `json:"openai_host,omitempty"`
+	OpenAIRequestsLimit string `json:"openai_requests_limit,omitempty"`
+	OpenAITokensLimit   string `json:"openai_tokens_limit,omitempty"`
+	OpenAITierReason    string `json:"openai_tier_reason,omitempty"`
+	Error               string `json:"error,omitempty"`
 }
 
 // KeyValidator provides methods to validate API keys.
@@ -149,11 +154,16 @@ func (s *KeyValidator) TestMultipleKeys(group *models.Group, keyValues []string)
 		validationResult, validationErr := s.ValidateSingleKey(&apiKey, group)
 
 		results[i] = KeyTestResult{
-			KeyValue:          kv,
-			IsValid:           validationResult.IsValid,
-			OpenAITier:        apiKey.OpenAITier,
-			OpenAITierUpdated: validationResult.OpenAITierUpdated,
-			Error:             "",
+			KeyValue:            kv,
+			IsValid:             validationResult.IsValid,
+			OpenAITier:          apiKey.OpenAITier,
+			OpenAITierUpdated:   validationResult.OpenAITierUpdated,
+			OpenAIModel:         validationResult.OpenAIModel,
+			OpenAIHost:          validationResult.OpenAIHost,
+			OpenAIRequestsLimit: validationResult.OpenAIRequestsLimit,
+			OpenAITokensLimit:   validationResult.OpenAITokensLimit,
+			OpenAITierReason:    validationResult.OpenAITierReason,
+			Error:               "",
 		}
 		if validationErr != nil {
 			results[i].Error = validationErr.Error()
