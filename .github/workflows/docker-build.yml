@@ -38,6 +38,7 @@ jobs:
           flavor: |
             latest=false
           tags: |
+            type=raw,value=${{ github.sha }}
             type=ref,event=branch
             type=ref,event=tag
             type=raw,value=beta,enable=${{ startsWith(github.ref, 'refs/tags/') && contains(github.ref_name, '-beta') }}
@@ -55,4 +56,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ github.sha }}
