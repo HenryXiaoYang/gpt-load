@@ -115,20 +115,26 @@ func (s *CronChecker) submitValidationJobs() {
 
 // validateGroupKeys validates all invalid keys for a single group concurrently.
 func (s *CronChecker) validateGroupKeys(group *models.Group) {
+	validationGroup, err := s.Validator.PrepareValidationGroup(group)
+	if err != nil {
+		logrus.WithError(err).WithField("group_id", group.ID).Error("CronChecker: Failed to prepare validation group")
+		return
+	}
+
 	groupProcessStart := time.Now()
 
 	var invalidKeys []models.APIKey
-	err := s.DB.Where("group_id = ? AND status = ?", group.ID, models.KeyStatusInvalid).Find(&invalidKeys).Error
+	err = s.DB.Where("group_id = ? AND status = ?", validationGroup.ID, models.KeyStatusInvalid).Find(&invalidKeys).Error
 	if err != nil {
-		logrus.Errorf("CronChecker: Failed to get invalid keys for group %s: %v", group.Name, err)
+		logrus.Errorf("CronChecker: Failed to get invalid keys for group %s: %v", validationGroup.Name, err)
 		return
 	}
 
 	if len(invalidKeys) == 0 {
-		if err := s.DB.Model(group).Update("last_validated_at", time.Now()).Error; err != nil {
-			logrus.Errorf("CronChecker: Failed to update last_validated_at for group %s: %v", group.Name, err)
+		if err := s.DB.Model(validationGroup).Update("last_validated_at", time.Now()).Error; err != nil {
+			logrus.Errorf("CronChecker: Failed to update last_validated_at for group %s: %v", validationGroup.Name, err)
 		}
-		logrus.Infof("CronChecker: Group '%s' has no invalid keys to check.", group.Name)
+		logrus.Infof("CronChecker: Group '%s' has no invalid keys to check.", validationGroup.Name)
 		return
 	}
 
@@ -136,7 +142,7 @@ func (s *CronChecker) validateGroupKeys(group *models.Group) {
 	var keyWg sync.WaitGroup
 	jobs := make(chan *models.APIKey, len(invalidKeys))
 
-	concurrency := group.EffectiveConfig.KeyValidationConcurrency
+	concurrency := validationGroup.EffectiveConfig.KeyValidationConcurrency
 	for range concurrency {
 		keyWg.Add(1)
 		go func() {
@@ -159,7 +165,7 @@ func (s *CronChecker) validateGroupKeys(group *models.Group) {
 					keyForValidation := *key
 					keyForValidation.KeyValue = decryptedKey
 
-					validationResult, _ := s.Validator.ValidateSingleKey(&keyForValidation, group)
+					validationResult, _ := s.Validator.ValidateSingleKey(&keyForValidation, validationGroup)
 					if validationResult.IsValid {
 						atomic.AddInt32(&becameValidCount, 1)
 					}
@@ -182,14 +188,14 @@ DistributeLoop:
 
 	keyWg.Wait()
 
-	if err := s.DB.Model(group).Update("last_validated_at", time.Now()).Error; err != nil {
-		logrus.Errorf("CronChecker: Failed to update last_validated_at for group %s: %v", group.Name, err)
+	if err := s.DB.Model(validationGroup).Update("last_validated_at", time.Now()).Error; err != nil {
+		logrus.Errorf("CronChecker: Failed to update last_validated_at for group %s: %v", validationGroup.Name, err)
 	}
 
 	duration := time.Since(groupProcessStart)
 	logrus.Infof(
 		"CronChecker: Group '%s' validation finished. Total checked: %d, became valid: %d. Duration: %s.",
-		group.Name,
+		validationGroup.Name,
 		len(invalidKeys),
 		becameValidCount,
 		duration.String(),

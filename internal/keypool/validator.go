@@ -2,6 +2,7 @@ package keypool
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gpt-load/internal/channel"
 	"gpt-load/internal/config"
@@ -60,6 +61,36 @@ func NewKeyValidator(params KeyValidatorParams) *KeyValidator {
 		keypoolProvider: params.KeypoolProvider,
 		encryptionSvc:   params.EncryptionSvc,
 	}
+}
+
+// PrepareValidationGroup builds a fresh group snapshot for validation requests.
+// Validation should use the latest persisted config so proxy/header changes take
+// effect immediately instead of waiting for async cache invalidation.
+func (s *KeyValidator) PrepareValidationGroup(group *models.Group) (*models.Group, error) {
+	if group == nil {
+		return nil, fmt.Errorf("group is required")
+	}
+
+	preparedGroup := *group
+
+	if group.ID != 0 {
+		if err := s.DB.First(&preparedGroup, group.ID).Error; err != nil {
+			return nil, fmt.Errorf("failed to load latest group config for group %d: %w", group.ID, err)
+		}
+	}
+
+	preparedGroup.EffectiveConfig = s.SettingsManager.GetEffectiveConfig(preparedGroup.Config)
+
+	if len(preparedGroup.HeaderRules) > 0 {
+		if err := json.Unmarshal(preparedGroup.HeaderRules, &preparedGroup.HeaderRuleList); err != nil {
+			logrus.WithError(err).WithField("group_id", preparedGroup.ID).Warn("Failed to parse header rules for validation, ignoring")
+			preparedGroup.HeaderRuleList = []models.HeaderRule{}
+		}
+	} else {
+		preparedGroup.HeaderRuleList = []models.HeaderRule{}
+	}
+
+	return &preparedGroup, nil
 }
 
 // ValidateSingleKey performs a validation check on a single API key.
@@ -126,6 +157,11 @@ func keyValidationTimeout(group *models.Group) time.Duration {
 
 // TestMultipleKeys performs a synchronous validation for a list of key values within a specific group.
 func (s *KeyValidator) TestMultipleKeys(group *models.Group, keyValues []string) ([]KeyTestResult, error) {
+	validationGroup, err := s.PrepareValidationGroup(group)
+	if err != nil {
+		return nil, err
+	}
+
 	results := make([]KeyTestResult, len(keyValues))
 
 	// Generate hashes for all key values
@@ -166,7 +202,7 @@ func (s *KeyValidator) TestMultipleKeys(group *models.Group, keyValues []string)
 
 		apiKey.KeyValue = kv
 
-		validationResult, validationErr := s.ValidateSingleKey(&apiKey, group)
+		validationResult, validationErr := s.ValidateSingleKey(&apiKey, validationGroup)
 
 		results[i] = KeyTestResult{
 			KeyValue:          kv,

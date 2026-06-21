@@ -45,6 +45,11 @@ func NewKeyManualValidationService(db *gorm.DB, validator *keypool.KeyValidator,
 
 // StartValidationTask starts a new manual validation task for a given group.
 func (s *KeyManualValidationService) StartValidationTask(group *models.Group, status string) (*TaskStatus, error) {
+	validationGroup, err := s.Validator.PrepareValidationGroup(group)
+	if err != nil {
+		return nil, err
+	}
+
 	var keys []models.APIKey
 	query := s.DB.Where("group_id = ?", group.ID)
 	if status != "" {
@@ -64,7 +69,7 @@ func (s *KeyManualValidationService) StartValidationTask(group *models.Group, st
 	}
 
 	// Run the validation in a separate goroutine
-	go s.runValidation(group, keys, status)
+	go s.runValidation(validationGroup, keys, status)
 
 	return taskStatus, nil
 }
