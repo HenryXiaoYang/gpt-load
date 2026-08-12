@@ -42,6 +42,11 @@ type ChannelProxy interface {
 	TransformModelList(req *http.Request, bodyBytes []byte, group *models.Group) (map[string]any, error)
 }
 
+// ResponseTransformer optionally rewrites successful upstream responses.
+type ResponseTransformer interface {
+	TransformResponse(req *http.Request, resp *http.Response, stream bool)
+}
+
 // KeyValidationResult holds channel-specific metadata discovered during key validation.
 type KeyValidationResult struct {
 	IsValid             bool

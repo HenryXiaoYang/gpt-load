@@ -43,6 +43,7 @@ const formRef = ref();
 // 渠道类型选项
 const channelTypeOptions = [
   { label: "OpenAI", value: "openai" as ChannelType },
+  { label: "Mistral OpenAI", value: "mistral-openai" as ChannelType },
   { label: "OpenAI Response", value: "openai-response" as ChannelType },
   { label: "OpenAI Image Generation", value: "openai-image-generation" as ChannelType },
   { label: "DeepSeek", value: "deepseek" as ChannelType },

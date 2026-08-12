@@ -101,7 +101,7 @@ func (s *Server) GetIntegrationInfo(c *gin.Context) {
 
 // getEffectiveChannelType returns the effective channel type
 func getEffectiveChannelType(group *models.Group) string {
-	if group.ChannelType != "openai" && group.ChannelType != "openai-response" {
+	if group.ChannelType != "openai" && group.ChannelType != "openai-response" && group.ChannelType != "mistral-openai" {
 		return group.ChannelType
 	}
 
@@ -112,7 +112,7 @@ func getEffectiveChannelType(group *models.Group) string {
 
 	defaultEndpoint := ""
 	switch group.ChannelType {
-	case "openai":
+	case "openai", "mistral-openai":
 		defaultEndpoint = "/v1/chat/completions"
 	case "openai-response":
 		defaultEndpoint = "/v1/responses"

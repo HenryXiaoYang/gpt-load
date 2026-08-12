@@ -14,6 +14,7 @@ export type GroupType = "standard" | "aggregate";
 // 渠道类型
 export type ChannelType =
   | "openai"
+  | "mistral-openai"
   | "openai-response"
   | "openai-image-generation"
   | "deepseek"
