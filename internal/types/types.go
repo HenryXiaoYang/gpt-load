@@ -42,6 +42,9 @@ type SystemSettings struct {
 	KeyValidationIntervalMinutes int    `json:"key_validation_interval_minutes" default:"60" name:"config.key_validation_interval" category:"config.category.key" desc:"config.key_validation_interval_desc" validate:"required,min=1"`
 	KeyValidationConcurrency     int    `json:"key_validation_concurrency" default:"10" name:"config.key_validation_concurrency" category:"config.category.key" desc:"config.key_validation_concurrency_desc" validate:"required,min=1"`
 	KeyValidationTimeoutSeconds  int    `json:"key_validation_timeout_seconds" default:"20" name:"config.key_validation_timeout" category:"config.category.key" desc:"config.key_validation_timeout_desc" validate:"required,min=1"`
+	ChannelRPMLimit              int    `json:"channel_rpm_limit" default:"0" name:"config.channel_rpm_limit" category:"config.category.key" desc:"config.channel_rpm_limit_desc" validate:"required,min=0"`
+	ChannelRPMThresholdPercent   int    `json:"channel_rpm_threshold_percent" default:"60" name:"config.channel_rpm_threshold_percent" category:"config.category.key" desc:"config.channel_rpm_threshold_percent_desc" validate:"required,min=1"`
+	ChannelRPMRampMinutes        int    `json:"channel_rpm_ramp_minutes" default:"5" name:"config.channel_rpm_ramp_minutes" category:"config.category.key" desc:"config.channel_rpm_ramp_minutes_desc" validate:"required,min=1"`
 
 	// For cache
 	ProxyKeysMap map[string]struct{} `json:"-"`

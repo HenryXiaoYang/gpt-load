@@ -15,6 +15,7 @@ export type GroupType = "standard" | "aggregate";
 export type ChannelType =
   | "openai"
   | "mistral-openai"
+  | "mistral-console"
   | "openai-response"
   | "openai-image-generation"
   | "deepseek"

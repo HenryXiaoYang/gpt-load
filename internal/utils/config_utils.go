@@ -181,6 +181,8 @@ func GetValidationEndpoint(group *models.Group) string {
 	switch group.ChannelType {
 	case "openai", "mistral-openai":
 		return "/v1/chat/completions"
+	case "mistral-console":
+		return "/api-ui/bora/v1/conversations"
 	case "deepseek":
 		return "/chat/completions"
 	case "openrouter":

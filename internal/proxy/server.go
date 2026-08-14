@@ -195,9 +195,19 @@ func (ps *ProxyServer) executeRequestWithRetry(
 		client = channelHandler.GetHTTPClient()
 	}
 
+	if !tryAcquireChannelRPM(group) {
+		err := app_errors.NewAPIErrorWithUpstream(http.StatusTooManyRequests, "CHANNEL_RPM_LIMIT_EXCEEDED", "channel RPM protection limit exceeded")
+		ps.logRequest(c, originalGroup, group, apiKey, startTime, http.StatusTooManyRequests, err, isStream, upstreamURL, channelHandler, bodyBytes, models.RequestTypeFinal)
+		response.Error(c, err)
+		return
+	}
+
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
+		recordChannelRPM429(group)
 	}
 
 	// Unified error handling for retries.
